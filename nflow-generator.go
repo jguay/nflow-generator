@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"github.com/matryer/try"
 )
 
 type Proto int
@@ -57,11 +58,11 @@ func main() {
 	collector := opts.CollectorIP + ":" + opts.CollectorPort
 	udpAddr, err := net.ResolveUDPAddr("udp", collector)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error resolving address: ", err)
 	}
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
-		log.Fatal("Error connecting to the target collector: ", err)
+		log.Fatal("Error dialUDP: ", err)
 	}
 	log.Infof("sending netflow data to a collector ip: %s and port: %s. \n"+
 		"Use ctrl^c to terminate the app.", opts.CollectorIP, opts.CollectorPort)
@@ -76,16 +77,32 @@ func main() {
 		if n > 900 {
 			data := GenerateNetflow(8)
 			buffer := BuildNFlowPayload(data)
-			_, err := conn.Write(buffer.Bytes())
+			try.Do(func(attempt int) (bool, error) {
+				var err error
+				_, err = conn.Write(buffer.Bytes())
+				if err != nil {
+						log.Infof("Retrying ... Error connecting to the target collector: ", err)
+						time.Sleep(5 * time.Second)
+					}
+					return attempt < 5, err //this is retrying forever at this point - all the better as it is what I need and I don't know golang...
+				})
 			if err != nil {
-				log.Fatal("Error connecting to the target collector: ", err)
+				log.Fatal("Error writing to the target collector (recordCount 8): ", err)
 			}
 		} else {
 			data := GenerateNetflow(16)
 			buffer := BuildNFlowPayload(data)
-			_, err := conn.Write(buffer.Bytes())
+			try.Do(func(attempt int) (bool, error) {
+					var err error
+					_, err = conn.Write(buffer.Bytes())
+					if err != nil {
+						log.Infof("Retrying ... Error connecting to the target collector: ", err)
+						time.Sleep(5 * time.Second)
+					}
+					return attempt < 5, err //retrying forever...
+				})
 			if err != nil {
-				log.Fatal("Error connecting to the target collector: ", err)
+				log.Fatal("Error writing to the target collector (recordCount 16): ", err)
 			}
 		}
 		// add some periodic spike data

@@ -1,0 +1,1 @@
+docker build -t nflow-generator:1.1 .
