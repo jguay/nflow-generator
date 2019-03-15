@@ -1,5 +1,7 @@
 # Usage - nflow-generator
 
+forked from [https://github.com/nerdalert/nflow-generator](https://github.com/nerdalert/nflow-generator), this is adding some bad code to retry connection forever (so that if destination is not available it keeps on retrying every 5 seconds)
+
 This program generates mock netflow (v5) data that can be used to test netflow collector programs. 
 The program simulates a router that is exporting flow records to the collector.
 It is useful for determining whether the netflow collector is operating and/or receiving netflow datagrams.
